@@ -6,6 +6,7 @@ extern "C" {
 #endif /** __cplusplus */
 
 void UartInit(void);
+void UartTx(uint8_t * data, uint16_t size);
 
 #ifdef __cplusplus
 }

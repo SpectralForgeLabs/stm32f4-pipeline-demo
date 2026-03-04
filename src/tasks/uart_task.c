@@ -9,6 +9,7 @@
 #include "uart.h"
 #include "spi.h"
 #include "uart_task.h"
+#include "timer.h"
 
 /** Defines */
 
@@ -18,11 +19,16 @@
 void vTaskUart(void * varg)
 {
     UartInit();
+    uint32_t microseconds = 0;
 
     while(1)
     {
+
         // Delay 1 second
-        vTaskDelay(pdMS_TO_TICKS(500));
-        USART1->DR = 0x50;
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        // Do something with microseconds value
+        microseconds = usec_time_get();
+        /** Causes missed bytes occasionaly, need to button up */
+        UartTx((uint8_t *)&microseconds, sizeof(microseconds));
     }
 }

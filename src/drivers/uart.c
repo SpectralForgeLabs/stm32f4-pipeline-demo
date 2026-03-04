@@ -39,3 +39,15 @@ void UartInit(void)
     /* Start USART */
     USART1->CR1 |= USART_CR1_UE;
 }
+
+/// @brief Sends data to uart, will convert to dma trasnfer in the future
+/// @param data pointer to data to be sent
+/// @param size size of data to be sent
+void UartTx(uint8_t * data, uint16_t size)
+{
+    for (uint16_t i = 0; i < size; i++)
+    {
+        while ((USART1->SR & USART_SR_TXE) != USART_SR_TXE) { }
+        USART1->DR = data[i];
+    }
+}

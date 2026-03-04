@@ -4,6 +4,7 @@
 #include "uart_task.h"
 #include "clock_stm32f4xx.h"
 #include "stm32f4xx.h"
+#include "timer.h"
 
 /// @brief 
 /// @param  
@@ -69,9 +70,14 @@ void vApplicationIdleHook(void)
 /// @return 
 int main(void)
 {
+    __enable_irq();
+
     SystemCoreClockUpdate();
     InitSysClock();
     
+    /** Start Timers */
+    Timer2Init(1000); // Initialize Timer 2 with 1kHz frequency
+
     xTaskCreate(vTaskBlinky, "vBlinky", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
     xTaskCreate(vTaskUart, "vUart", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
 
