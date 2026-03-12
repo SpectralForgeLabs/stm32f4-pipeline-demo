@@ -25,10 +25,11 @@ void vTaskUart(void * varg)
     {
 
         // Delay 1 second
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(250));
         // Do something with microseconds value
         microseconds = usec_time_get();
         /** Causes missed bytes occasionaly, need to button up */
+        // UartTx((uint8_t *)&microseconds, sizeof(microseconds));
         UartTx((uint8_t *)&microseconds, sizeof(microseconds));
     }
 }

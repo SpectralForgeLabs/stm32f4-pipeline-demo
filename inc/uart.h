@@ -5,6 +5,8 @@
 extern "C" {
 #endif /** __cplusplus */
 
+extern uint8_t uart_buf[256];
+
 void UartInit(void);
 void UartTx(uint8_t * data, uint16_t size);
 

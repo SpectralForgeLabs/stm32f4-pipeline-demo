@@ -2,3 +2,8 @@ UART to USB
  * Green TX
  * White RX
  * Black GND
+
+Repos needed
+branch v6.3.0 git@github.com:ARM-software/CMSIS_6.git cmsis_core
+branch v2.6.11 git@github.com:STMicroelectronics/cmsis-device-f4.git
+branch V11.2.0 git@github.com:FreeRTOS/FreeRTOS-Kernel.git
