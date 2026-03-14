@@ -7,9 +7,21 @@
 #include "uart.h"
 #include <string.h>
 
-#define dma2_isr DMA2_Stream7_IRQHandler
+/** Defines */
+#define GPIO_AFHR_AFSEL9_7 (GPIO_AFRH_AFSEL9_0 | GPIO_AFRH_AFSEL9_1 | GPIO_AFRH_AFSEL9_2)
+#define GPIO_AFHR_AFSEL10_7 (GPIO_AFRH_AFSEL10_0 | GPIO_AFRH_AFSEL10_1 | GPIO_AFRH_AFSEL10_2)
+#define dma7_isr DMA2_Stream7_IRQHandler
+/** Global/Static variables */
 
-void dma2_isr(void)
+uint8_t uart_buf[256];
+
+/** Functions */
+void ConfigureUsartDma(void);
+
+/*******************************************************************************
+ * @brief DMA2_Stream7 interrupt handler
+ */
+void dma7_isr(void)
 {
     if (DMA2->HISR & DMA_HISR_TCIF7) // Check if transfer complete interrupt flag is set
     {
@@ -24,17 +36,6 @@ void dma2_isr(void)
         DMA2_Stream7->CR &= ~DMA_SxCR_EN;
     }
 }
-
-void ConfigureUsartDma(void);
-
-/** Defines */
-#define GPIO_AFHR_AFSEL9_7 (GPIO_AFRH_AFSEL9_0 | GPIO_AFRH_AFSEL9_1 | GPIO_AFRH_AFSEL9_2)
-#define GPIO_AFHR_AFSEL10_7 (GPIO_AFRH_AFSEL10_0 | GPIO_AFRH_AFSEL10_1 | GPIO_AFRH_AFSEL10_2)
-/** Global/Static variables */
-
-uint8_t uart_buf[256];
-
-/** Functions */
 
 void UartInit(void)
 {
@@ -59,13 +60,17 @@ void UartInit(void)
     /** Enable USART TX and RX leave every default 8 bit 1 stop no parity */
     USART1->CR1 |= USART_CR1_TE | USART_CR1_RE;
 
+    /** Enable DMA for USART1 */
     USART1->CR3 |= USART_CR3_DMAT;
-    ConfigureDma();
+    ConfigureUsartDma();
 
     /* Start USART */
     USART1->CR1 |= USART_CR1_UE;
 }
 
+/*******************************************************************************
+ * @brief Configures the DMA for USART1
+ */
 void ConfigureUsartDma(void)
 {
     /** Enable periph clock */
@@ -90,7 +95,7 @@ void ConfigureUsartDma(void)
     DMA2_Stream7->CR |= DMA_SxCR_TCIE;
     /** Enable Timer 2 interrupt in NVIC */
     NVIC_SetPriority(DMA2_Stream7_IRQn, 5);
-    NVIC_EnableIRQ(TIM2_IRQn);
+    NVIC_EnableIRQ(DMA2_Stream7_IRQn);
 
     /** enable dma */
     // DMA1_Stream7->CR |= DMA_SxCR_EN;

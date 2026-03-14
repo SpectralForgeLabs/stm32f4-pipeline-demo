@@ -30,23 +30,13 @@ void vTaskBlinky(void * varg)
 
     SpiInit();
 
-    char by[6];
+    uint8_t by[6] = {0x9f, 0xff, 0xff, 0xff, 0xff, 0xff};
     while(1)
     {
         // Delay 1 second
         vTaskDelay(pdMS_TO_TICKS(500));
         GPIOA->ODR ^= (GPIO_ODR_OD6 | GPIO_ODR_OD7);
         
-        /** Slave device is tied to PBO */
-        GPIOB->BSRR = GPIO_BSRR_BR0;
-        by[0] = SpiTxRx(0x9f);
-        by[1] = SpiTxRx(0xff);
-        by[2] = SpiTxRx(0xff);
-        by[3] = SpiTxRx(0xff);
-        by[4] = SpiTxRx(0xff);
-        by[5] = SpiTxRx(0xff);
-        by[6] = SpiTxRx(0xff);
-
-        GPIOB->BSRR = GPIO_BSRR_BS0;
+        SpiTxRx(by, sizeof(by));
     }
 }

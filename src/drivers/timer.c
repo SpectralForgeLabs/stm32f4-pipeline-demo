@@ -6,6 +6,8 @@
 #include "timer.h"
 #include <stdlib.h>
 
+#define timer2_irq TIM2_IRQHandler
+
 static volatile uint32_t microseconds = 0;
 QueueHandle_t timer_queue;
 
