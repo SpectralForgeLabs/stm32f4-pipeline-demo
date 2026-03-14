@@ -7,7 +7,25 @@
 #include "uart.h"
 #include <string.h>
 
-void ConfigureDma(void);
+#define dma2_isr DMA2_Stream7_IRQHandler
+
+void dma2_isr(void)
+{
+    if (DMA2->HISR & DMA_HISR_TCIF7) // Check if transfer complete interrupt flag is set
+    {
+        // Handle transfer complete event (e.g., signal a task, set a flag, etc.)
+        DMA2->HIFCR =
+        DMA_HIFCR_CFEIF7 |
+        DMA_HIFCR_CDMEIF7 |
+        DMA_HIFCR_CTEIF7 |
+        DMA_HIFCR_CHTIF7 |
+        DMA_HIFCR_CTCIF7;
+
+        DMA2_Stream7->CR &= ~DMA_SxCR_EN;
+    }
+}
+
+void ConfigureUsartDma(void);
 
 /** Defines */
 #define GPIO_AFHR_AFSEL9_7 (GPIO_AFRH_AFSEL9_0 | GPIO_AFRH_AFSEL9_1 | GPIO_AFRH_AFSEL9_2)
@@ -48,7 +66,7 @@ void UartInit(void)
     USART1->CR1 |= USART_CR1_UE;
 }
 
-void ConfigureDma(void)
+void ConfigureUsartDma(void)
 {
     /** Enable periph clock */
     RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN;
@@ -69,27 +87,27 @@ void ConfigureDma(void)
     DMA2_Stream7->CR |= (DMA_SxCR_DIR_0);
 
     /** Enabel transfer complete interrupts */
-    // DMA1+DMA1_Stream7->CR |= DMA_SxCR_TCIE;
+    DMA2_Stream7->CR |= DMA_SxCR_TCIE;
+    /** Enable Timer 2 interrupt in NVIC */
+    NVIC_SetPriority(DMA2_Stream7_IRQn, 5);
+    NVIC_EnableIRQ(TIM2_IRQn);
 
     /** enable dma */
     // DMA1_Stream7->CR |= DMA_SxCR_EN;
+
+    // Use stream 5 for channel 4 USART RX
 }
 
+/*******************************************************************************
+ * @brief Start a dma transfer of size bytes from uart_buf to USART1 DR
+ * @param bytes number of bytes to transfer
+ * @return void 
+ */
 void TransferData(uint16_t bytes)
 {
     /* Wait until previous DMA transfer is no longer enabled */
-    /** Can offload to dma transfer complete int */
-    DMA2_Stream7->CR &= ~DMA_SxCR_EN;
-    while ((DMA2_Stream7->CR & DMA_SxCR_EN) != 0U)
-    {
-    }
-    /* Clear all pending flags for DMA2 Stream7 */
-    DMA2->HIFCR =
-        DMA_HIFCR_CFEIF7 |
-        DMA_HIFCR_CDMEIF7 |
-        DMA_HIFCR_CTEIF7 |
-        DMA_HIFCR_CHTIF7 |
-        DMA_HIFCR_CTCIF7;
+    while ((DMA2_Stream7->CR & DMA_SxCR_EN) != 0U);
+    
 
     DMA2_Stream7->NDTR = bytes;
     /** enable dma? */
@@ -102,11 +120,6 @@ void TransferData(uint16_t bytes)
 /// @param size size of data to be sent
 void UartTx(uint8_t * data, uint16_t size)
 {
-    // for (uint16_t i = 0; i < size; i++)
-    // {
-    //     while ((USART1->SR & USART_SR_TXE) != USART_SR_TXE) { }
-    //     USART1->DR = data[i];
-    // }
     memcpy(uart_buf, data, size);
     TransferData(size);
 }
