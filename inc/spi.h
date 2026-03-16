@@ -5,11 +5,10 @@
 extern "C" {
 #endif /** __cplusplus */
 
-extern char spi_rx_buf[256];
-extern char spi_tx_buf[256];
+#define SPI_MAX_TRANSFER 256
 
 void SpiInit(void);
-uint8_t SpiTxRx(uint8_t * by, size_t len);
+int SpiTransfer(uint8_t const * tx, uint8_t * rx, size_t len, uint8_t block);
 
 #ifdef __cplusplus
 }

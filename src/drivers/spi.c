@@ -16,54 +16,98 @@
 #define FLASH_CS_LOW()   (GPIOB->BSRR = GPIO_BSRR_BR0)
 #define FLASH_CS_HIGH()  (GPIOB->BSRR = GPIO_BSRR_BS0)
 
+#define spi1_isr SPI1_IRQHandler
 #define dma0_isr DMA2_Stream0_IRQHandler
 #define dma3_isr DMA2_Stream3_IRQHandler
 /** Global/Static variables */
-char spi_rx_buf[256];
-char spi_tx_buf[256];
+volatile uint8_t spi_busy = 0U;
+volatile uint8_t spi_done = 0U;
+volatile uint8_t spi_error = 0U;
+
 /** Functions */
 void ConfigureSpiDma(void);
+uint8_t SpiDmaStart(uint8_t const * tx, uint8_t * rx, size_t len);
+
 /*******************************************************************************
  * @brief DMA2_Stream0 interrupt handler
  */
 void dma0_isr(void)
 {
-    if (DMA2->LISR & DMA_LISR_TCIF0) // Check if transfer complete interrupt flag is set
+    // Check if transfer complete interrupt flag is set
+    if (DMA2->LISR & DMA_LISR_TCIF0) 
     {
         // Handle transfer complete event (e.g., signal a task, set a flag, etc.)
-        DMA2->LIFCR =
-        DMA_LIFCR_CFEIF0 |
-        DMA_LIFCR_CDMEIF0 |
-        DMA_LIFCR_CTEIF0 |
-        DMA_LIFCR_CHTIF0 |
-        DMA_LIFCR_CTCIF0;
+        DMA2->LIFCR = DMA_LIFCR_CFEIF0 |
+                      DMA_LIFCR_CDMEIF0 |
+                      DMA_LIFCR_CTEIF0 |
+                      DMA_LIFCR_CHTIF0 |
+                      DMA_LIFCR_CTCIF0 |
+                      DMA_LIFCR_CFEIF3 |
+                      DMA_LIFCR_CDMEIF3 |
+                      DMA_LIFCR_CTEIF3 |
+                      DMA_LIFCR_CHTIF3 |
+                      DMA_LIFCR_CTCIF3;
 
         DMA2_Stream0->CR &= ~DMA_SxCR_EN;
-        SPI1->CR2 &= ~SPI_CR2_RXDMAEN;
+        DMA2_Stream3->CR &= ~DMA_SxCR_EN;
+
+        SPI1->CR2 &= ~(SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN);
+
+        while (SPI1->SR & SPI_SR_BSY);
+
+        FLASH_CS_HIGH();
+        spi_busy = 0U;
+        spi_done = 1U;
+    }
+
+    if (DMA2->LISR & (DMA_LISR_TEIF0 | DMA_LISR_DMEIF0 | DMA_LISR_FEIF0))
+    {
+        DMA2->LIFCR = DMA_LIFCR_CFEIF0 |
+                      DMA_LIFCR_CDMEIF0 |
+                      DMA_LIFCR_CTEIF0 |
+                      DMA_LIFCR_CHTIF0 |
+                      DMA_LIFCR_CTCIF0 |
+                      DMA_LIFCR_CFEIF3 |
+                      DMA_LIFCR_CDMEIF3 |
+                      DMA_LIFCR_CTEIF3 |
+                      DMA_LIFCR_CHTIF3 |
+                      DMA_LIFCR_CTCIF3;
+
+        DMA2_Stream0->CR &= ~DMA_SxCR_EN;
+        DMA2_Stream3->CR &= ~DMA_SxCR_EN;
+        SPI1->CR2 &= ~(SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN);
+
+        while (SPI1->SR & SPI_SR_BSY);
+
+        FLASH_CS_HIGH();
+
+        spi_busy = 0U;
+        spi_error = 1U;
     }
 }
 
 /*******************************************************************************
- * @brief DMA2_Stream3 interrupt handler
+ * @brief DMA2_Stream3 interrupt handler for SPI TX complete transactions
  */
-void dma3_isr(void)
-{
-    if (DMA2->LISR & DMA_LISR_TCIF3) // Check if transfer complete interrupt flag is set
-    {
-        // Handle transfer complete event (e.g., signal a task, set a flag, etc.)
-        DMA2->LIFCR =
-        DMA_LIFCR_CFEIF3 |
-        DMA_LIFCR_CDMEIF3 |
-        DMA_LIFCR_CTEIF3 |
-        DMA_LIFCR_CHTIF3 |
-        DMA_LIFCR_CTCIF3;
+// void dma3_isr(void)
+// {
+//     if (DMA2->LISR & DMA_LISR_TCIF3) // Check if transfer complete interrupt flag is set
+//     {
+//         // Handle transfer complete event (e.g., signal a task, set a flag, etc.)
+//         DMA2->LIFCR =
+//         DMA_LIFCR_CFEIF3 |
+//         DMA_LIFCR_CDMEIF3 |
+//         DMA_LIFCR_CTEIF3 |
+//         DMA_LIFCR_CHTIF3 |
+//         DMA_LIFCR_CTCIF3;
 
-        DMA2_Stream3->CR &= ~DMA_SxCR_EN;
-        SPI1->CR2 &= ~SPI_CR2_TXDMAEN;
-        FLASH_CS_HIGH();
-    }
-}
-
+//         DMA2_Stream3->CR &= ~DMA_SxCR_EN;
+//         SPI1->CR2 &= ~SPI_CR2_TXDMAEN;
+//     }
+// }
+/*******************************************************************************
+ * @brief Initializes SPI1 peripheral and configures DMA for SPI transfers
+ */
 void SpiInit(void)
 {
     /** 
@@ -85,19 +129,75 @@ void SpiInit(void)
                  SPI_CR1_BR_16 |
                  SPI_CR1_SSM |
                  SPI_CR1_SSI;
+
+    /** Configure DMA portion */
+    ConfigureSpiDma();
+    
+    FLASH_CS_HIGH();
 }
 
-uint8_t SpiTxRx(uint8_t * by, size_t len)
+/*******************************************************************************
+ * @brief Start SPI transfer using DMA
+ * @param tx Pointer to transmit buffer
+ * @param rx Pointer to receive buffer
+ * @param len Length of data to transfer (must be <= SPI_MAX_TRANSFER)
+ * @param block If non-zero, function will block until transfer is complete; 
+ *              if zero, function will return immediately and transfer will 
+ *              complete in background
+ * @return 0 on success, -1 on invalid parameters, -2 if length exceeds maximum
+ */
+int SpiTransfer(uint8_t const * tx, uint8_t * rx, size_t len, uint8_t block)
 {
-    memcpy(spi_tx_buf, by, len);
-    /** Enable DMA for SPI1 */
-    ConfigureSpiDma();
-    SPI1->CR2 |= SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;
+    if ((tx == NULL) || (rx == NULL) || (len == 0U))
+    {
+        return -1;
+    }
+
+    if (len > SPI_MAX_TRANSFER)
+    {
+        return -2;
+    }
+
+    if (block)
+    {
+        while (spi_busy);
+    }
+    else
+    {
+        if (spi_busy)
+        {
+            return -3; // SPI is currently busy with another transfer
+        }
+    }
+
+    spi_busy = 1U;
+    spi_done = 0U;
+    spi_error = 0U;
 
     FLASH_CS_LOW();
+    SpiDmaStart(tx, rx, len);
 
-    DMA2_Stream0->CR |= DMA_SxCR_EN;
+    return 0;
+}
+
+/*******************************************************************************
+ * @brief Starts SPI transfer using DMA
+ * @param tx Pointer to transmit buffer
+ * @param rx Pointer to receive buffer
+ * @param len Length of data to transfer
+ * @return 0 on success, non-zero on failure
+ */
+uint8_t SpiDmaStart(uint8_t const * tx, uint8_t * rx, size_t len)
+{
+    DMA2_Stream3->M0AR = (volatile uint32_t)tx;
+    DMA2_Stream3->NDTR = len;
     DMA2_Stream3->CR |= DMA_SxCR_EN;
+
+    DMA2_Stream0->M0AR = (volatile uint32_t)rx;
+    DMA2_Stream0->NDTR = len;
+    DMA2_Stream0->CR |= DMA_SxCR_EN;
+    
+    SPI1->CR2 |= SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;
 
     return 0;
 }
@@ -114,49 +214,38 @@ void ConfigureSpiDma(void)
     }
     DMA2_Stream0->CR &= ~DMA_SxCR_EN;
     while(DMA2_Stream0->CR & DMA_SxCR_EN);
-
+    
     /** 2 & 3 Set peripheral and memory addresses address */
     DMA2_Stream0->PAR = (uint32_t)&SPI1->DR;
-    DMA2_Stream0->M0AR = (volatile uint32_t)spi_rx_buf;
-
-    /** 5 Select dma channel */
-    // 100: channel 4 selected USART TX
-    DMA2_Stream0->CR |= (DMA_SxCR_CHSEL_1 | DMA_SxCR_CHSEL_0);
-    /** Increment memory pointer */
-    DMA2_Stream0->CR |= DMA_SxCR_MINC;
     
+    /** 5 Select dma channel */
+    /** 011: channel 3 SPI */
+    /** Increment memory pointer */
     /** Set trasnfer from peripheral memory*/
-    DMA2_Stream0->CR &= ~(DMA_SxCR_DIR);
-
-    /** Enabel transfer complete interrupts */
-    DMA2_Stream0->CR |= DMA_SxCR_TCIE;
+    /** Enable transfer complete interrupts */
+    DMA2_Stream0->CR =  DMA_SxCR_CHSEL_1 |
+                        DMA_SxCR_CHSEL_0 |
+                        DMA_SxCR_MINC   |
+                        DMA_SxCR_TCIE;
+    
 
     DMA2_Stream3->CR &= ~DMA_SxCR_EN;
     while(DMA2_Stream3->CR & DMA_SxCR_EN);
 
     /** 2 & 3 Set peripheral and memory addresses address */
     DMA2_Stream3->PAR = (uint32_t)&SPI1->DR;
-    DMA2_Stream3->M0AR = (volatile uint32_t)spi_tx_buf;
 
     /** 5 Select dma channel */
     // 100: channel 4 selected USART TX
-    DMA2_Stream3->CR |= (DMA_SxCR_CHSEL_1 | DMA_SxCR_CHSEL_0);
-    /** Increment memory pointer */
-    DMA2_Stream3->CR |= DMA_SxCR_MINC;
-    
-    /** Set transfer from memory to peripheral */
-    DMA2_Stream3->CR |= (DMA_SxCR_DIR_0);
+    DMA2_Stream3->CR =  DMA_SxCR_CHSEL_1 |
+                        DMA_SxCR_CHSEL_0 |
+                        DMA_SxCR_MINC   |
+                        DMA_SxCR_DIR_0;
 
-    /** Enabel transfer complete interrupts */
-    DMA2_Stream3->CR |= DMA_SxCR_TCIE;
+
     /** Enable Timer 2 interrupt in NVIC */
     NVIC_SetPriority(DMA2_Stream0_IRQn, 5);
     NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-    NVIC_SetPriority(DMA2_Stream3_IRQn, 5);
-    NVIC_EnableIRQ(DMA2_Stream3_IRQn);
-
-    /** enable dma */
-    // DMA1_Stream7->CR |= DMA_SxCR_EN;
-
-    // Use stream 5 for channel 4 USART RX
+    // NVIC_SetPriority(DMA2_Stream3_IRQn, 5);
+    // NVIC_EnableIRQ(DMA2_Stream3_IRQn);
 }

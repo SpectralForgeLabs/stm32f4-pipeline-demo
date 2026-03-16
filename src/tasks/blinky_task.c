@@ -10,10 +10,11 @@
 #include "spi.h"
 #include "blinky_task.h"
 
+#include <stdbool.h>
 /** Defines */
 
 /** Global/Static variables */
-
+static uint8_t spi_rx_buf[256];
 /** Functions */
 void vTaskBlinky(void * varg)
 {
@@ -30,13 +31,15 @@ void vTaskBlinky(void * varg)
 
     SpiInit();
 
-    uint8_t by[6] = {0x9f, 0xff, 0xff, 0xff, 0xff, 0xff};
+    uint8_t by[4] = {0x9f, 0xff, 0xff, 0xff};
+    uint8_t UNIQUE_ID[9] = {0xab, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     while(1)
     {
         // Delay 1 second
         vTaskDelay(pdMS_TO_TICKS(500));
         GPIOA->ODR ^= (GPIO_ODR_OD6 | GPIO_ODR_OD7);
         
-        SpiTxRx(by, sizeof(by));
+        SpiTransfer(by, spi_rx_buf, sizeof(by), true);
+        SpiTransfer(UNIQUE_ID, spi_rx_buf, sizeof(UNIQUE_ID), true);
     }
 }
