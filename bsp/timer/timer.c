@@ -22,6 +22,8 @@ void timer2_irq(void)
 /// @param frequency 
 void Timer2Init(uint32_t frequency)
 {
+    (void)frequency;
+    
     /** Enable clock to Timer 2 */
     RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
 

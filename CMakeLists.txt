@@ -33,16 +33,17 @@ set(COMMON_LD_FLAGS
 
 # Add other cmake directories here
 include(cmake/freertos.cmake)
+include(bsp/bsp.cmake)
 
 # ---- Target ----
 add_executable(${PROJECT_NAME}.elf
   src/main.c
   src/syscall.c
   src/clock_stm32f4xx.c
-  src/drivers/uart.c
+  # src/drivers/uart.c
   src/drivers/spi_flash.c
-  src/drivers/timer.c
-  src/drivers/gpio.c
+  # src/drivers/timer.c
+  # src/drivers/gpio.c
   src/tasks/blinky_task.c
   src/tasks/uart_task.c
   ${ST_F4_DIR}/Source/Templates/system_stm32f4xx.c
@@ -52,7 +53,7 @@ add_executable(${PROJECT_NAME}.elf
 target_include_directories(${PROJECT_NAME}.elf PRIVATE
   ${CMSIS_CORE_DIR}/CMSIS/Core/Include
   ${ST_F4_DIR}/Include
-  ${CMAKE_SOURCE_DIR}/include
+  ${CMAKE_SOURCE_DIR}/inc
 )
 
 # Required so stm32f4xx.h pulls the right part header
@@ -73,7 +74,10 @@ set_source_files_properties(
   PROPERTIES COMPILE_OPTIONS "${MCU_FLAGS}"
 )
 
-target_link_libraries(${PROJECT_NAME}.elf PRIVATE freertos)
+target_link_libraries(${PROJECT_NAME}.elf PRIVATE 
+  freertos
+  bsp
+  )
 
 target_link_options(${PROJECT_NAME}.elf PRIVATE
   ${MCU_FLAGS}
