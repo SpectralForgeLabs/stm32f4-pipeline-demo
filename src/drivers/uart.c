@@ -96,11 +96,6 @@ void ConfigureUsartDma(void)
     /** Enable Timer 2 interrupt in NVIC */
     NVIC_SetPriority(DMA2_Stream7_IRQn, 5);
     NVIC_EnableIRQ(DMA2_Stream7_IRQn);
-
-    /** enable dma */
-    // DMA1_Stream7->CR |= DMA_SxCR_EN;
-
-    // Use stream 5 for channel 4 USART RX
 }
 
 /*******************************************************************************

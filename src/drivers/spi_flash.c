@@ -6,23 +6,20 @@
 #include <stddef.h>
 #include <string.h>
 #include "spi.h"
-/** Defines */
-#define GPIO_AFRL_AFSEL3_5 (GPIO_AFRL_AFSEL3_0 | GPIO_AFRL_AFSEL3_2)
-#define GPIO_AFRL_AFSEL4_5 (GPIO_AFRL_AFSEL4_0 | GPIO_AFRL_AFSEL4_2)
-#define GPIO_AFRL_AFSEL5_5 (GPIO_AFRL_AFSEL5_0 | GPIO_AFRL_AFSEL5_2)
+#include "gpio.h"
 
+/** Defines */
 #define SPI_CR1_BR_16 (SPI_CR1_BR_1 | SPI_CR1_BR_0)
 
-#define FLASH_CS_LOW()   (GPIOB->BSRR = GPIO_BSRR_BR0)
-#define FLASH_CS_HIGH()  (GPIOB->BSRR = GPIO_BSRR_BS0)
+#define FLASH_CS_LOW()   GPIO_CLR(flash_cs)
+#define FLASH_CS_HIGH()  GPIO_SET(flash_cs)
 
-#define spi1_isr SPI1_IRQHandler
 #define dma0_isr DMA2_Stream0_IRQHandler
-#define dma3_isr DMA2_Stream3_IRQHandler
 /** Global/Static variables */
 volatile uint8_t spi_busy = 0U;
 volatile uint8_t spi_done = 0U;
 volatile uint8_t spi_error = 0U;
+gpio_handle_t flash_cs;
 
 /** Functions */
 void ConfigureSpiDma(void);
@@ -87,25 +84,6 @@ void dma0_isr(void)
 }
 
 /*******************************************************************************
- * @brief DMA2_Stream3 interrupt handler for SPI TX complete transactions
- */
-// void dma3_isr(void)
-// {
-//     if (DMA2->LISR & DMA_LISR_TCIF3) // Check if transfer complete interrupt flag is set
-//     {
-//         // Handle transfer complete event (e.g., signal a task, set a flag, etc.)
-//         DMA2->LIFCR =
-//         DMA_LIFCR_CFEIF3 |
-//         DMA_LIFCR_CDMEIF3 |
-//         DMA_LIFCR_CTEIF3 |
-//         DMA_LIFCR_CHTIF3 |
-//         DMA_LIFCR_CTCIF3;
-
-//         DMA2_Stream3->CR &= ~DMA_SxCR_EN;
-//         SPI1->CR2 &= ~SPI_CR2_TXDMAEN;
-//     }
-// }
-/*******************************************************************************
  * @brief Initializes SPI1 peripheral and configures DMA for SPI transfers
  */
 void SpiInit(void)
@@ -115,11 +93,52 @@ void SpiInit(void)
      */
     RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
     
+    gpio_config_t flash_cs_cfg =
+    {
+        .port = GPIO_PORT_B,
+        .pin = GPIO_PIN_0,
+        .mode = GPIO_MODE_OUTPUT,
+        .output_type = GPIO_OUTPUT_PUSHPULL,
+        .pull = GPIO_PULL_NONE,
+        .speed = GPIO_SPEED_HIGH,
+    };
+    flash_cs = gpio_init(&flash_cs_cfg);
     /** Set mux for PB3/4/5: SCK MISO MOSI AF5*/
-    GPIOB->MODER |= GPIO_MODER_MODER3_1 |
-                    GPIO_MODER_MODER4_1 |
-                    GPIO_MODER_MODER5_1;
-    GPIOB->AFR[0] |= GPIO_AFRL_AFSEL3_5 | GPIO_AFRL_AFSEL4_5 | GPIO_AFRL_AFSEL5_5;
+    gpio_config_t flash_sck_cfg =
+    {
+        .port = GPIO_PORT_B,
+        .pin = GPIO_PIN_3, // SCK
+        .mode = GPIO_MODE_ALT_FUNC,
+        .output_type = GPIO_OUTPUT_PUSHPULL,
+        .pull = GPIO_PULL_NONE,
+        .speed = GPIO_SPEED_HIGH,
+        .alternate_function = 5U
+    };
+    gpio_handle_t flash_sck = gpio_init(&flash_sck_cfg);
+    
+    gpio_config_t flash_miso_cfg =
+    {
+        .port = GPIO_PORT_B,
+        .pin = GPIO_PIN_4, // MISO
+        .mode = GPIO_MODE_ALT_FUNC,
+        .output_type = GPIO_OUTPUT_PUSHPULL,
+        .pull = GPIO_PULL_NONE,
+        .speed = GPIO_SPEED_HIGH,
+        .alternate_function = 5U
+    };
+    gpio_handle_t flash_miso = gpio_init(&flash_miso_cfg);
+
+    gpio_config_t flash_mosi_cfg =
+    {
+        .port = GPIO_PORT_B,
+        .pin = GPIO_PIN_5, // MOSI
+        .mode = GPIO_MODE_ALT_FUNC,
+        .output_type = GPIO_OUTPUT_PUSHPULL,
+        .pull = GPIO_PULL_NONE,
+        .speed = GPIO_SPEED_HIGH,
+        .alternate_function = 5U
+    };
+    gpio_handle_t flash_mosi = gpio_init(&flash_mosi_cfg);
 
     /** 
      * Config SPI

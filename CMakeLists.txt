@@ -40,8 +40,9 @@ add_executable(${PROJECT_NAME}.elf
   src/syscall.c
   src/clock_stm32f4xx.c
   src/drivers/uart.c
-  src/drivers/spi.c
+  src/drivers/spi_flash.c
   src/drivers/timer.c
+  src/drivers/gpio.c
   src/tasks/blinky_task.c
   src/tasks/uart_task.c
   ${ST_F4_DIR}/Source/Templates/system_stm32f4xx.c

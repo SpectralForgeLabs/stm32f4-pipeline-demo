@@ -8,6 +8,7 @@
 
 #include "uart.h"
 #include "spi.h"
+#include "gpio.h"
 #include "blinky_task.h"
 
 #include <stdbool.h>
@@ -21,13 +22,19 @@ void vTaskBlinky(void * varg)
 
     // Quick sanity: enable GPIOD clock (F407 Discovery LED port)
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-    GPIOA->MODER |= GPIO_MODER_MODER6_0 | GPIO_MODER_MODER7_0;
-    GPIOA->OTYPER |= GPIO_OTYPER_OT6 | GPIO_OTYPER_OT7;
 
-    GPIOA->ODR |= GPIO_ODR_OD6 | GPIO_ODR_OD7;
-
-    GPIOB->MODER |= GPIO_MODER_MODE0_0;
-    GPIOB->OTYPER &= ~GPIO_OTYPER_OT0;
+    gpio_config_t led_cfg =
+    {
+        .port = GPIO_PORT_A,
+        .pin = GPIO_PIN_6,
+        .mode = GPIO_MODE_OUTPUT,
+        .output_type = GPIO_OUTPUT_PUSHPULL,
+        .pull = GPIO_PULL_NONE,
+        .speed = GPIO_SPEED_LOW,
+        .alternate_function = 0U,
+        .initial_state = GPIO_STATE_LOW
+    };
+    gpio_handle_t led = gpio_init(&led_cfg);
 
     SpiInit();
 
@@ -37,7 +44,7 @@ void vTaskBlinky(void * varg)
     {
         // Delay 1 second
         vTaskDelay(pdMS_TO_TICKS(500));
-        GPIOA->ODR ^= (GPIO_ODR_OD6 | GPIO_ODR_OD7);
+        GPIO_TOGGLE(led);
         
         SpiTransfer(by, spi_rx_buf, sizeof(by), true);
         SpiTransfer(UNIQUE_ID, spi_rx_buf, sizeof(UNIQUE_ID), true);

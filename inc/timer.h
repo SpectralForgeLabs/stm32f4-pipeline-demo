@@ -1,14 +1,9 @@
 #ifndef __INCtimer_h
 #define __INCtimer_h
 
-#include "FreeRTOS.h"
-#include "queue.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /** __cplusplus */
-
-extern QueueHandle_t timer_queue;
 
 static inline __attribute__((always_inline)) uint32_t usec_time_get(void)
 {
