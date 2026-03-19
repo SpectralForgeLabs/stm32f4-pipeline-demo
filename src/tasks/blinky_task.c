@@ -19,7 +19,8 @@ static uint8_t spi_rx_buf[256];
 /** Functions */
 void vTaskBlinky(void * varg)
 {
-
+    (void)varg; // Unused parameter
+    
     // Quick sanity: enable GPIOD clock (F407 Discovery LED port)
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
 

@@ -1,15 +1,60 @@
 cmake_minimum_required(VERSION 3.20)
-project(stm_test C ASM)
+project(stm32 C ASM)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# ---- Paths to your shared "layers" ----
-set(CMSIS_CORE_DIR "$ENV{HOME}/.embedded/cmsis_core")
-set(ST_F4_DIR      "$ENV{HOME}/.embedded/st/cmsis-device-f4")
+if(DEFINED ENV{GITHUB_RUN_NUMBER})
+    set(BUILD_NUM $ENV{GITHUB_RUN_NUMBER})
+else()
+    set(BUILD_NUM 9999)
+endif()
 
+if(DEFINED ENV{GITHUB_SHA})
+    string(SUBSTRING "$ENV{GITHUB_SHA}" 0 8 BUILD_SHA)
+else()
+    set(BUILD_SHA "local")
+endif()
+
+message(STATUS "Build number: ${BUILD_NUM}")
+
+if(DEFINED ENV{GITHUB_ACTIONS})
+# ---- FetchContent ----
+  include(FetchContent)
+  FetchContent_Declare(cmsis_core
+      GIT_REPOSITORY https://github.com/ARM-software/CMSIS_6.git
+      GIT_TAG        v6.3.0
+      GIT_SHALLOW    TRUE
+  )
+
+  FetchContent_Declare(cmsis_f4
+      GIT_REPOSITORY https://github.com/STMicroelectronics/cmsis-device-f4.git
+      GIT_TAG        v2.6.11
+      GIT_SHALLOW    TRUE
+  )
+
+  FetchContent_Declare(freertos_kernel
+      GIT_REPOSITORY https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+      GIT_TAG        V11.2.0
+      GIT_SHALLOW    TRUE
+  )
+  # Populate but don't process their CMakeLists
+  FetchContent_Populate(freertos_kernel)
+  FetchContent_Populate(cmsis_core)
+  FetchContent_Populate(cmsis_f4)
+
+  # ---- Paths now point to fetched content ----
+  set(CMSIS_CORE_DIR  ${cmsis_core_SOURCE_DIR})
+  set(ST_F4_DIR       ${cmsis_f4_SOURCE_DIR})
+  set(FREERTOS_DIR    ${freertos_kernel_SOURCE_DIR})
+else()
+  # ---- Paths to your shared "layers" ----
+  set(CMSIS_CORE_DIR "$ENV{HOME}/.embedded/cmsis_core")
+  set(ST_F4_DIR      "$ENV{HOME}/.embedded/st/cmsis-device-f4")
+  set(FREERTOS_DIR   "$ENV{HOME}/.embedded/FreeRTOS-Kernel")
+endif()
+  
 set(LINKER_SCRIPT  "${CMAKE_SOURCE_DIR}/linker/stm32f407vet6.ld")
-
 # ---- MCU flags (STM32F407 = Cortex-M4F, hard-float) ----
 set(MCU_FLAGS 
     -mcpu=cortex-m4
@@ -34,16 +79,13 @@ set(COMMON_LD_FLAGS
 # Add other cmake directories here
 include(cmake/freertos.cmake)
 include(bsp/bsp.cmake)
+include(drivers/drivers.cmake)
 
 # ---- Target ----
 add_executable(${PROJECT_NAME}.elf
   src/main.c
   src/syscall.c
   src/clock_stm32f4xx.c
-  # src/drivers/uart.c
-  src/drivers/spi_flash.c
-  # src/drivers/timer.c
-  # src/drivers/gpio.c
   src/tasks/blinky_task.c
   src/tasks/uart_task.c
   ${ST_F4_DIR}/Source/Templates/system_stm32f4xx.c
@@ -59,6 +101,8 @@ target_include_directories(${PROJECT_NAME}.elf PRIVATE
 # Required so stm32f4xx.h pulls the right part header
 target_compile_definitions(${PROJECT_NAME}.elf PRIVATE
   STM32F407xx
+  BUILD_NUM=${BUILD_NUM}
+  BUILD_SHA="${BUILD_SHA}"
 )
 
 target_compile_options(${PROJECT_NAME}.elf PRIVATE
@@ -77,6 +121,7 @@ set_source_files_properties(
 target_link_libraries(${PROJECT_NAME}.elf PRIVATE 
   freertos
   bsp
+  drivers
   )
 
 target_link_options(${PROJECT_NAME}.elf PRIVATE
@@ -95,13 +140,20 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
 
 # ---- Generate .hex and .bin ----
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
+  
+
   COMMAND ${CMAKE_OBJCOPY} -O ihex
           $<TARGET_FILE:${PROJECT_NAME}.elf>
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.hex
+          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.${BUILD_NUM}.hex
   COMMAND ${CMAKE_OBJCOPY} -O binary
           $<TARGET_FILE:${PROJECT_NAME}.elf>
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.bin
+          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.${BUILD_NUM}.bin
+
+# Rename ELF with build number
+  COMMAND ${CMAKE_COMMAND} -E rename
+          $<TARGET_FILE:${PROJECT_NAME}.elf>
+          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.${BUILD_NUM}.elf
   BYPRODUCTS
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.hex
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.bin
+          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.${BUILD_NUM}.hex
+          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.${BUILD_NUM}.bin
 )

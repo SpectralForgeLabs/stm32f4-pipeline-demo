@@ -1,0 +1,48 @@
+kubectl create namespace <namespace>
+
+apply nexus.yaml
+
+kubectl apply -f nexus.yaml
+kubectl get pods -n <namespace> -w
+
+Get admin password for nexus
+kubectl exec -n <namespace> <pod name> -- \
+  cat /nexus-data/admin.password
+
+b205e3f3-ba5e-4c44-a375-c2379b63c1fa
+nexus1234
+
+forwards ports to access ui
+kubectl port-forward -n spectralforge svc/nexus 8081:8081
+
+Gear icon (Server Administration)
+→ Repository
+→ Repositories
+→ Create repository
+→ raw (hosted)
+check allow redeploy
+
+leave the rest as defaults
+
+curl -u admin:pw --upload-file test.txt http://localhost:8081/repository/embedded-artifacts/
+curl http://localhost:8081/repository/embedded-artifacts/test.txt
+
+for kubernetes
+
+make sure match uid of listener and job pods to docker pods
+same for both single and kubernetes mode.
+
+add ons to readme
+<!-- | [SpectralForge Labs](https://spectralforge.dev) -->
+
+<!-- 
+UART to USB
+ * Green TX
+ * White RX
+ * Black GND
+
+Repos needed
+branch v6.3.0 git@github.com:ARM-software/CMSIS_6.git cmsis_core
+branch v2.6.11 git@github.com:STMicroelectronics/cmsis-device-f4.git
+branch V11.2.0 git@github.com:FreeRTOS/FreeRTOS-Kernel.git
+-->

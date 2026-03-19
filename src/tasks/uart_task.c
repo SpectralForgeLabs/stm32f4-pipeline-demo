@@ -11,15 +11,28 @@
 #include "uart_task.h"
 #include "timer.h"
 
-/** Defines */
+#include <stdio.h>
+#include <string.h>
 
+/** Defines */
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 /** Global/Static variables */
 
 /** Functions */
 void vTaskUart(void * varg)
 {
-    UartInit();
+    (void)varg; // Unused parameter
+    
+    char buffer[64];
     uint32_t microseconds = 0;
+    
+    sprintf(buffer, "SpectralForge Build: %s\r\nSHA: %s\r\n", TOSTRING(BUILD_NUM), TOSTRING(BUILD_SHA));
+
+    UartInit();
+
+
+    UartTx((uint8_t *)buffer, strlen(buffer));
 
     while(1)
     {
@@ -30,6 +43,6 @@ void vTaskUart(void * varg)
         microseconds = usec_time_get();
         /** Causes missed bytes occasionaly, need to button up */
         // UartTx((uint8_t *)&microseconds, sizeof(microseconds));
-        UartTx((uint8_t *)&microseconds, sizeof(microseconds));
+        // UartTx((uint8_t *)&microseconds, sizeof(microseconds));
     }
 }

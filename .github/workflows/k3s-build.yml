@@ -1,0 +1,32 @@
+name: STM32F407 Kubernetes Runner Build
+
+on:
+  push:
+    branches: [ "master" ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build-k3s:
+    runs-on: [spectral-k3s]
+    container:
+      image: arm-none-eabi:15.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build firmware
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi-gcc.cmake
+          cmake --build build
+
+      - name: Upload artifacts to Nexus
+        run: |
+          BRANCH=$(echo ${{ github.ref_name }})
+          BUILD_NUM=${{ github.run_number }}
+          
+          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32.${BUILD_NUM}.elf http://192.168.1.198:30081/repository/embedded-artifacts/${BRANCH}/
+          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32.${BUILD_NUM}.hex http://192.168.1.198:30081/repository/embedded-artifacts/${BRANCH}/
+          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32.${BUILD_NUM}.bin http://192.168.1.198:30081/repository/embedded-artifacts/${BRANCH}/
+          echo "Artifacts available at:"
+          echo "http://192.168.1.198:30081/repository/embedded-artifacts/${BRANCH}/"

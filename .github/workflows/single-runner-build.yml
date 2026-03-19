@@ -1,0 +1,35 @@
+name: STM32F407 Single Runner Build
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: [spectral-single]
+
+    steps:
+      - uses: actions/checkout@v4 
+      - name: Build firmware
+        run: |
+          docker run --rm \
+            -e GITHUB_ACTIONS=true \
+            -e GITHUB_SHA=${{ github.sha }} \
+            -e GITHUB_REF_NAME=${{ github.ref_name }} \
+            -v ${{ github.workspace }}:/home/runner/workspace \
+            -w /home/runner/workspace \
+            arm-none-eabi:15.2.single \
+            bash -c "cmake -S . -B build -G Ninja \
+              -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi-gcc.cmake \
+              && cmake --build build"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ github.sha }}
+          path: |
+            build/*.elf
+            build/*.hex
+            build/*.bin
+          retention-days: 90
+

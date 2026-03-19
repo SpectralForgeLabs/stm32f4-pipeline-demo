@@ -114,7 +114,7 @@ void SpiInit(void)
         .speed = GPIO_SPEED_HIGH,
         .alternate_function = 5U
     };
-    gpio_handle_t flash_sck = gpio_init(&flash_sck_cfg);
+    gpio_init(&flash_sck_cfg);
     
     gpio_config_t flash_miso_cfg =
     {
@@ -126,7 +126,7 @@ void SpiInit(void)
         .speed = GPIO_SPEED_HIGH,
         .alternate_function = 5U
     };
-    gpio_handle_t flash_miso = gpio_init(&flash_miso_cfg);
+    gpio_init(&flash_miso_cfg);
 
     gpio_config_t flash_mosi_cfg =
     {
@@ -138,7 +138,7 @@ void SpiInit(void)
         .speed = GPIO_SPEED_HIGH,
         .alternate_function = 5U
     };
-    gpio_handle_t flash_mosi = gpio_init(&flash_mosi_cfg);
+    gpio_init(&flash_mosi_cfg);
 
     /** 
      * Config SPI

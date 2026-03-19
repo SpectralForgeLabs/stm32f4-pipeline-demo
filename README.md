@@ -22,12 +22,12 @@ and hope for the best," this is the alternative.
 Every commit triggers an automated build via GitHub Actions on a 
 self-hosted Raspberry Pi runner:
 
-- ARM toolchain in Docker (arm-none-eabi-gcc 13.x)
+- ARM toolchain in Docker (arm-none-eabi-gcc 15.2)
 - CMake + Ninja build system
 - Produces ELF, HEX, and BIN artifacts automatically
 - Build artifacts available for download on every commit
 
-![Build](https://github.com/YOUR_USERNAME/stm32-freertos-ci-pipeline/actions/workflows/build.yml/badge.svg)
+![Build](https://github.com/SpectralForgeLabs/stm32f4-pipeline-demo/actions/workflows/k3s-build.yml/badge.svg)
 
 ## Dependencies
 
@@ -41,26 +41,16 @@ Fetched automatically at build time — no manual setup:
 
 ## Building locally
 ```bash
-cmake -B build -G Ninja \
-  -DCMSIS_CORE_DIR=/path/to/cmsis_core \
-  -DST_F4_DIR=/path/to/cmsis-device-f4
+cmake -S . -B build -G Ninja \
+-DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi-gcc.cmake
 cmake --build build
 ```
+Dependencies fetched automatically via FetchContent when building in CI.
+Local builds use dependencies from `$HOME/.embedded/`.
 
 ## About
 
 Built by an embedded software engineer with production VxWorks experience. 
 Available for consulting on embedded CI/CD pipeline setup for small teams.
-Contact: [your email or LinkedIn]
 
-<!-- 
-UART to USB
- * Green TX
- * White RX
- * Black GND
-
-Repos needed
-branch v6.3.0 git@github.com:ARM-software/CMSIS_6.git cmsis_core
-branch v2.6.11 git@github.com:STMicroelectronics/cmsis-device-f4.git
-branch V11.2.0 git@github.com:FreeRTOS/FreeRTOS-Kernel.git
--->
+Contact: [LinkedIn](https://www.linkedin.com/in/daniel-guillen-b7b239132/) 

@@ -1,5 +1,5 @@
 # cmake/freertos.cmake
-set(FREERTOS_DIR ~/.embedded/FreeRTOS-Kernel)
+set(FREERTOS_DIR ${FREERTOS_DIR})
 
 add_library(freertos STATIC
     # Kernel
