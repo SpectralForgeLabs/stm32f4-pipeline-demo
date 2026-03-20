@@ -4,6 +4,9 @@ project(stm32 C ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+# Prebuild step
+include(cmake/pre_build.cmake)
+
 if(DEFINED ENV{GITHUB_RUN_NUMBER})
     set(BUILD_NUM $ENV{GITHUB_RUN_NUMBER})
 else()
@@ -137,6 +140,8 @@ target_link_options(${PROJECT_NAME}.elf PRIVATE
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
   COMMAND ${CMAKE_SIZE} $<TARGET_FILE:${PROJECT_NAME}.elf>
 )
+# Compute short SHA from BUILD_NUMBER is already set, grab SHA too
+string(SUBSTRING "${GIT_SHA}" 0 7 SHORT_SHA)
 
 # ---- Generate .hex and .bin ----
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
@@ -144,16 +149,18 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
 
   COMMAND ${CMAKE_OBJCOPY} -O ihex
           $<TARGET_FILE:${PROJECT_NAME}.elf>
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.${BUILD_NUM}.hex
+          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-${BUILD_NUM}-${SHORT_SHA}.hex
   COMMAND ${CMAKE_OBJCOPY} -O binary
           $<TARGET_FILE:${PROJECT_NAME}.elf>
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.${BUILD_NUM}.bin
+          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-${BUILD_NUM}-${SHORT_SHA}.bin
 
 # Rename ELF with build number
   COMMAND ${CMAKE_COMMAND} -E rename
           $<TARGET_FILE:${PROJECT_NAME}.elf>
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.${BUILD_NUM}.elf
+          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-${BUILD_NUM}-${SHORT_SHA}.elf
   BYPRODUCTS
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.${BUILD_NUM}.hex
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.${BUILD_NUM}.bin
+          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-${BUILD_NUM}-${SHORT_SHA}.hex
+          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-${BUILD_NUM}-${SHORT_SHA}.bin
+
+  COMMENT "Packaging: ${PROJECT_NAME}-${BUILD_NUMBER}-${SHORT_SHA}.{elf,hex,bin}"
 )

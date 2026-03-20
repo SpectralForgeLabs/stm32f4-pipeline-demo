@@ -5,6 +5,15 @@
 #include "clock_stm32f4xx.h"
 #include "stm32f4xx.h"
 #include "timer.h"
+#include "version.h"
+#include "buildinfo.h"
+
+__attribute__((section(".builddata")))
+const build_info_t build_info = {
+  .git_sha      = GIT_SHA,
+  .branch       = GIT_BRANCH,
+  .build_number = BUILD_NUMBER,
+};
 
 /// @brief 
 /// @param  

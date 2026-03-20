@@ -12,6 +12,10 @@ jobs:
     runs-on: [spectral-k3s]
     container:
       image: arm-none-eabi:15.2
+      env:
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_REF_NAME: ${{ github.ref_name }}
+        BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
       - name: Build firmware
@@ -22,11 +26,11 @@ jobs:
 
       - name: Upload artifacts to Nexus
         run: |
-          BRANCH=$(echo ${{ github.ref_name }})
-          BUILD_NUM=${{ github.run_number }}
-          
-          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32.${BUILD_NUM}.elf http://192.168.1.198:30081/repository/embedded-artifacts/${BRANCH}/
-          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32.${BUILD_NUM}.hex http://192.168.1.198:30081/repository/embedded-artifacts/${BRANCH}/
-          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32.${BUILD_NUM}.bin http://192.168.1.198:30081/repository/embedded-artifacts/${BRANCH}/
+          SHORT_SHA=${GITHUB_SHA::7}
+          BASE_URL="http://192.168.1.198:30081/repository/embedded-artifacts/${GITHUB_REF_NAME}"
+
+          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.elf ${BASE_URL}/
+          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.hex ${BASE_URL}/
+          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.bin ${BASE_URL}/
           echo "Artifacts available at:"
-          echo "http://192.168.1.198:30081/repository/embedded-artifacts/${BRANCH}/"
+          echo "${BASE_URL}/"

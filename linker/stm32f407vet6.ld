@@ -33,6 +33,14 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH :flash_text
 
+  .builddata :
+  {
+    . = ALIGN(4);
+    _builddata_start = .;
+    *(.builddata)
+    . = ALIGN(4);
+  } >FLASH :flash_text
+
   /* The program code and other data goes into FLASH */
   .text :
   {
