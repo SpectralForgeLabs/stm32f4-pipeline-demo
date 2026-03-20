@@ -88,7 +88,7 @@ int main(void)
     Timer2Init(1000); // Initialize Timer 2 with 1kHz frequency
 
     xTaskCreate(vTaskBlinky, "vBlinky", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
-    xTaskCreate(vTaskUart, "vUart", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(vTaskUart, "vUart", 0x200, NULL, tskIDLE_PRIORITY + 1, NULL);
 
     vTaskStartScheduler();
 

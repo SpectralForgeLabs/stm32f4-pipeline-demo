@@ -26,7 +26,7 @@ jobs:
 
       - name: Upload artifacts to Nexus
         run: |
-          SHORT_SHA=${GITHUB_SHA::7}
+          SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
           BASE_URL="http://192.168.1.198:30081/repository/embedded-artifacts/${GITHUB_REF_NAME}"
 
           curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.elf ${BASE_URL}/

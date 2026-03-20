@@ -10,6 +10,7 @@
 #include "spi.h"
 #include "uart_task.h"
 #include "timer.h"
+#include "buildinfo.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -24,16 +25,23 @@ void vTaskUart(void * varg)
 {
     (void)varg; // Unused parameter
     
-    char buffer[64];
+    char buffer[128];
     uint32_t microseconds = 0;
     
-    sprintf(buffer, "SpectralForge Build: %s\r\nSHA: %s\r\n", TOSTRING(BUILD_NUM), TOSTRING(BUILD_SHA));
-
+    
     UartInit();
-
-
+    
+    sprintf(buffer, "BOOT OK\n");
     UartTx((uint8_t *)buffer, strlen(buffer));
 
+    sprintf(buffer, "BRANCH: %s\n", build_info.branch);
+    UartTx((uint8_t *)buffer, strlen(buffer));
+
+    sprintf(buffer, "BUILD NUMBER: %s\n", build_info.build_number);
+    UartTx((uint8_t *)buffer, strlen(buffer));
+    
+    sprintf(buffer, "SHA: %s\n", build_info.git_sha);
+    UartTx((uint8_t *)buffer, strlen(buffer));
     while(1)
     {
 
