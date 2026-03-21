@@ -88,6 +88,7 @@ include(drivers/drivers.cmake)
 add_executable(${PROJECT_NAME}.elf
   src/main.c
   src/syscall.c
+  src/spectral_framer.c
   src/clock_stm32f4xx.c
   src/tasks/blinky_task.c
   src/tasks/uart_task.c

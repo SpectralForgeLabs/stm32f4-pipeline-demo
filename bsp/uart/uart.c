@@ -5,24 +5,52 @@
 #include "stm32f4xx.h"
 
 #include "uart.h"
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 /** Defines */
 #define GPIO_AFHR_AFSEL9_7 (GPIO_AFRH_AFSEL9_0 | GPIO_AFRH_AFSEL9_1 | GPIO_AFRH_AFSEL9_2)
 #define GPIO_AFHR_AFSEL10_7 (GPIO_AFRH_AFSEL10_0 | GPIO_AFRH_AFSEL10_1 | GPIO_AFRH_AFSEL10_2)
+
 #define dma7_isr DMA2_Stream7_IRQHandler
+#define usart1_isr USART1_IRQHandler
+
+#define UART_PRINTF_BUF_SIZE 256
 /** Global/Static variables */
-
-uint8_t uart_buf[256];
-
+SemaphoreHandle_t uart_tx_sem = NULL;
+QueueHandle_t uart_rx_queue = NULL;
+uint16_t overrun_error_count = 0;
 /** Functions */
 void ConfigureUsartDma(void);
 
+void usart1_isr(void)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    if (USART1->SR & USART_SR_RXNE) // Check if RXNE flag is set
+    {
+        char received_char = USART1->DR; // Read received data to clear RXNE flag
+        // Handle received character (e.g., store in buffer, signal a task, etc.)
+        xQueueSendFromISR(uart_rx_queue, &received_char, &xHigherPriorityTaskWoken);
+    }
+
+    if (USART1->SR & USART_SR_ORE)
+    {
+        /* clear overrun — read SR then DR */
+        volatile uint32_t tmp = USART1->SR;
+        tmp = USART1->DR;
+        (void)tmp;
+        /* optionally count overrun errors */
+        overrun_error_count++;
+    }
+}
 /*******************************************************************************
  * @brief DMA2_Stream7 interrupt handler
  */
 void dma7_isr(void)
 {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
     if (DMA2->HISR & DMA_HISR_TCIF7) // Check if transfer complete interrupt flag is set
     {
         // Handle transfer complete event (e.g., signal a task, set a flag, etc.)
@@ -34,10 +62,14 @@ void dma7_isr(void)
         DMA_HIFCR_CTCIF7;
 
         DMA2_Stream7->CR &= ~DMA_SxCR_EN;
+
+        // Give semaphore back from ISR
+        xSemaphoreGiveFromISR(uart_tx_sem, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 }
 
-void UartInit(void)
+int uart_init(void)
 {
     /** 
      * Enable clock to GPIOA, TX:PA_9 RX:PA_10 
@@ -64,8 +96,32 @@ void UartInit(void)
     USART1->CR3 |= USART_CR3_DMAT;
     ConfigureUsartDma();
 
+    // Create semaphore — start as available
+    uart_tx_sem = xSemaphoreCreateBinary();
+    if (uart_tx_sem == NULL) 
+    {
+        // Handle error: semaphore creation failed
+        return ERROR;
+    }
+    xSemaphoreGive(uart_tx_sem);
+
+    // Init rx queue
+    uart_rx_queue = xQueueCreate(128, sizeof(char));
+    if (uart_rx_queue == NULL)
+    {
+        // Handle error: queue creation failed
+        return ERROR;
+    }
+
+    /** set rxne interrupt */
+    USART1->CR1 |= USART_CR1_RXNEIE;
+    NVIC_SetPriority(USART1_IRQn, 5);
+    NVIC_EnableIRQ(USART1_IRQn);
+    
     /* Start USART */
     USART1->CR1 |= USART_CR1_UE;
+
+    return SUCCESS;
 }
 
 /*******************************************************************************
@@ -80,7 +136,6 @@ void ConfigureUsartDma(void)
 
     /** 2 & 3 Set peripheral and memory addresses address */
     DMA2_Stream7->PAR = (uint32_t)&USART1->DR;
-    DMA2_Stream7->M0AR = (volatile uint32_t)uart_buf;
 
     /** 5 Select dma channel */
     // 100: channel 4 selected USART TX
@@ -98,28 +153,27 @@ void ConfigureUsartDma(void)
     NVIC_EnableIRQ(DMA2_Stream7_IRQn);
 }
 
+
 /*******************************************************************************
- * @brief Start a dma transfer of size bytes from uart_buf to USART1 DR
- * @param bytes number of bytes to transfer
- * @return void 
+ * @brief Transmits data over UART using DMA
+ * @param fmt Format string for printf-style output
+ * @param ... Variable arguments for formatted output
  */
-void TransferData(uint16_t bytes)
+void uart_printf(const char *fmt, ...)
 {
-    /* Wait until previous DMA transfer is no longer enabled */
-    while ((DMA2_Stream7->CR & DMA_SxCR_EN) != 0U);
+    static char buf[UART_PRINTF_BUF_SIZE];
     
+    xSemaphoreTake(uart_tx_sem, portMAX_DELAY);
+    
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, UART_PRINTF_BUF_SIZE, fmt, args);
+    va_end(args);
+    
+    uint16_t len = strlen(buf);
+    DMA2_Stream7->NDTR = len;
+    DMA2_Stream7->M0AR = (uint32_t)buf;
+    DMA2_Stream7->CR  |= DMA_SxCR_EN;
 
-    DMA2_Stream7->NDTR = bytes;
-    /** enable dma? */
-    DMA2_Stream7->CR |= DMA_SxCR_EN;
-}
-
-/// @brief Sends data to uart, will convert to dma trasnfer in the future
-///        DMA is channel 4: stream 5 RX and stream 7 TX for usart1
-/// @param data pointer to data to be sent
-/// @param size size of data to be sent
-void UartTx(uint8_t * data, uint16_t size)
-{
-    memcpy(uart_buf, data, size);
-    TransferData(size);
+    /* semaphore given back in ISR */
 }

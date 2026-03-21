@@ -5,7 +5,9 @@
 extern "C" {
 #endif /** __cplusplus */
 
-void vTaskUart(void *);
+/** Functions */
+void vTaskUartTx(void *);
+void vTaskUartRx(void *);
 
 #ifdef __cplusplus
 }
