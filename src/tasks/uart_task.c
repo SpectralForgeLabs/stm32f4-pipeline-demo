@@ -109,14 +109,11 @@ void vTaskUartRx(void * varg)
 
     framer_init(&framer, freertos_get_time);
 
-    sprintf(buffer, "BRANCH: %s\n", build_info.branch);
-    UartTx((uint8_t *)buffer, strlen(buffer));
+    uart_printf("BOOT OK\n");
+    uart_printf("BRANCH: %s\n",       build_info.branch);
+    uart_printf("BUILD NUMBER: %s\n", build_info.build_number);
+    uart_printf("SHA: %s\n",          build_info.git_sha);
 
-    sprintf(buffer, "BUILD NUMBER: %s\n", build_info.build_number);
-    UartTx((uint8_t *)buffer, strlen(buffer));
-    
-    sprintf(buffer, "SHA: %s\n", build_info.git_sha);
-    UartTx((uint8_t *)buffer, strlen(buffer));
     while(1)
     {
         if (xQueueReceive(uart_rx_queue, &by, portMAX_DELAY) == pdPASS) 
