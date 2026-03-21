@@ -12,6 +12,7 @@
 #include "timer.h"
 #include "buildinfo.h"
 #include "spectral_framer.h"
+#include "spectral_parser.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -77,8 +78,9 @@ void vTaskUartRx(void * varg)
 
             if (state == FRAME_DONE)
             {
-                // parse_command(frame.data, frame.len);
+                /** parse framed data */
                 uart_printf("Received frame: len=%d, crc=%02X\n", frame.len, frame.crc);
+                spectral_parse(frame.data, frame.len);
                 framer_reset(&framer);
             }
             else if (state == FRAME_ERROR)

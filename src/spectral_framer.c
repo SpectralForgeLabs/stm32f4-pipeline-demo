@@ -108,7 +108,7 @@ framer_state_t framer_process(framer_t * f, spectral_frame_t * frame, uint8_t by
                 frame->len        = byte;
                 f->expected_len   = byte;
                 f->bytes_received = 0;
-                f->crc_accum      = 0;
+                f->crc_accum      = byte;
                 f->state          = RECV_DATA;
             }
             break;
