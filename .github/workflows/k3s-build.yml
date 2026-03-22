@@ -2,13 +2,44 @@ name: STM32F407 Kubernetes Runner Build
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "feature/unit-tests" ]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  test-framer:
+    runs-on: [spectral-k3s]
+    container:
+      image: 192.168.1.198:30050/unity:2.6.1
+      credentials:
+        username: admin
+        password: ${NEXUS_PASSWORD}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run framer unit test
+        run: |
+          cmake -S tests -B tests/build -G Ninja
+          ninja -C tests/build
+          ctest --test-dir tests/build/ -V -R framer
+
+  test-parser:
+    runs-on: [spectral-k3s]
+    container:
+      image: 192.168.1.198:30050/unity:2.6.1
+      credentials:
+        username: admin
+        password: ${NEXUS_PASSWORD}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run parser unit test
+        run: |
+          cmake -S tests -B tests/build -G Ninja
+          ninja -C tests/build
+          ctest --test-dir tests/build/ -V -R parser
+
   build-k3s:
+    needs: [test-framer, test-parser]
     runs-on: [spectral-k3s]
     container:
       image: arm-none-eabi:15.2

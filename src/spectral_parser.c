@@ -1,6 +1,5 @@
 /* spectral_parser.c */
 #include "buildinfo.h"
-#include "uart.h"
 #include "gpio.h"
 #include "spectral_parser.h"
 #include "blinky_task.h"
