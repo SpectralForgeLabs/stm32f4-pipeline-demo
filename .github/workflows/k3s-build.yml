@@ -1,9 +1,9 @@
 name: STM32F407 Kubernetes Runner Build
 
 on:
-  push:
-    branches-ignore:
-      - "master"
+  # push:
+  #   branches-ignore:
+  #     - "master"
   pull_request:
     branches: [ "master" ]
 
