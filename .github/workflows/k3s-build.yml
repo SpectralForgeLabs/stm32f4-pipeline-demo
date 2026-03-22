@@ -52,18 +52,19 @@ jobs:
       image: arm-none-eabi:15.2
       env:
         GITHUB_SHA: ${{ github.sha }}
-        GITHUB_REF_NAME: ${{ github.head_ref || github.ref_name }}
         BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
       - name: Build firmware
         run: |
+          export GITHUB_REF_NAME="${{ github.head_ref || github.ref_name }}"
           cmake -S . -B build -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi-gcc.cmake
           cmake --build build
 
       - name: Upload artifacts to Nexus
         run: |
+          export GITHUB_REF_NAME="${{ github.head_ref || github.ref_name }}"
           SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
           BASE_URL="http://192.168.1.198:30081/repository/embedded-artifacts/${GITHUB_REF_NAME}"
           curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.elf ${BASE_URL}/
