@@ -24,6 +24,8 @@ jobs:
         run: |
           cmake -S tests -B tests/build -G Ninja
           ninja -C tests/build
+      - name: Run unit test
+        run: |
           ctest --test-dir tests/build/ -V -R framer
 
   test-parser:
@@ -39,6 +41,8 @@ jobs:
         run: |
           cmake -S tests -B tests/build -G Ninja
           ninja -C tests/build
+      - name: Run unit test
+        run: |
           ctest --test-dir tests/build/ -V -R parser
 
   build-k3s:
@@ -49,6 +53,7 @@ jobs:
       env:
         GITHUB_SHA: ${{ github.sha }}
         GITHUB_REF_NAME: ${{ github.ref_name }}
+        GITHUB_HEAD_REF: ${{ github.head_ref }}
         BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
@@ -61,8 +66,7 @@ jobs:
       - name: Upload artifacts to Nexus
         run: |
           SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
-          BASE_URL="http://192.168.1.198:30081/repository/embedded-artifacts/${GITHUB_REF_NAME}"
-
+          BASE_URL="http://192.168.1.198:30081/repository/embedded-artifacts/${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.elf ${BASE_URL}/
           curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.hex ${BASE_URL}/
           curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.bin ${BASE_URL}/
