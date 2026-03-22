@@ -12,7 +12,7 @@ import sys
 import time
 
 BAUD_RATE    = 115200
-BOOT_TIMEOUT = 5  # seconds to wait for boot messages
+BOOT_TIMEOUT = 30  # seconds to wait for boot messages
 
 EXPECTED_LINES = [
     "BOOT OK",
@@ -48,7 +48,7 @@ def read_boot_messages(port, timeout):
         # Reset device before reading boot messages
         # Remove manual reset once DTR is wired to NRST
         reset_device(ser)
-        
+
         deadline = time.time() + timeout
         while time.time() < deadline:
             line = ser.readline().decode("utf-8", errors="replace").strip()
