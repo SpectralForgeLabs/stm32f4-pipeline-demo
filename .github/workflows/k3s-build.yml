@@ -92,7 +92,7 @@ jobs:
  
       - name: Run HIL boot test
         run: |
-          python3 HIL/hil_test.py \
+          python3 hil/hil_test.py \
             --port /dev/ttyUSB0 \
             --branch ${{ github.head_ref }} \
             --build-number ${{ github.run_number }} \
