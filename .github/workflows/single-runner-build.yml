@@ -3,6 +3,8 @@ name: STM32F407 Single Runner Build
 on:
   push:
     branches: [ "hotfix/*" ]
+  pull_request:
+    branches: [ "master" ]
 
 jobs:
   build:
