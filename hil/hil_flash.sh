@@ -16,7 +16,7 @@ if [ -z "$BRANCH" ] || [ -z "$BUILD_NUMBER" ] || [ -z "$SHORT_SHA" ]; then
     exit 1
 fi
 
-NEXUS_URL="http://192.168.1.198:30081/repository/embedded-artifacts"
+NEXUS_URL="nexus.spectralforge.dev/repository/embedded-artifacts"
 NEXUS_PWD=$(cat /home/alicevirgin/.secrets/nexus.pwd)
 HEX_FILE="stm32-${BUILD_NUMBER}-${SHORT_SHA}.hex"
 FETCH_URL="${NEXUS_URL}/${BRANCH}/${HEX_FILE}"
