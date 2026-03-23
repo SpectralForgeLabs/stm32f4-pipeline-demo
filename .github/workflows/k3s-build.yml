@@ -14,7 +14,7 @@ jobs:
   test-framer:
     runs-on: [spectral-k3s]
     container:
-      image: 192.168.1.198:30050/unity:2.6.1
+      image: registry.spectralforge.dev/unity:2.6.1
       credentials:
         username: admin
         password: ${NEXUS_PASSWORD}
