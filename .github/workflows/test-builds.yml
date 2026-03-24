@@ -1,7 +1,9 @@
 name: Kubernetes Runner Tests
 
 on:
-  push: [ "test/*"]
+  push:
+    branches:
+      - "test/*"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
