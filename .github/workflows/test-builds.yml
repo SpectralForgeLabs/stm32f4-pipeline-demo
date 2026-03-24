@@ -1,0 +1,19 @@
+name: Kubernetes Runner Tests
+
+on:
+  push: [ "test/*"]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  hello-world:
+    runs-on: [spectral-k3s]
+    container:
+      image: registry.spectralforge.dev/unity:2.6.1
+      credentials:
+        username: admin
+        password: ${NEXUS_PASSWORD}
+    steps:
+      - name: Hello world
+        run: echo "Hello from Kubernetes Runner!"
