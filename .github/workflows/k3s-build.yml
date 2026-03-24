@@ -66,7 +66,7 @@ jobs:
         run: |
           export GITHUB_REF_NAME="${{ github.head_ref || github.ref_name }}"
           SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
-          BASE_URL="nexus.spectralforge.dev/repository/embedded-artifacts/${GITHUB_REF_NAME}"
+          BASE_URL="192.168.1.198:30081/repository/embedded-artifacts/${GITHUB_REF_NAME}"
           curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.elf ${BASE_URL}/
           curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.hex ${BASE_URL}/
           curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.bin ${BASE_URL}/
