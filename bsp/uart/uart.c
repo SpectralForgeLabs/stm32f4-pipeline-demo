@@ -177,3 +177,19 @@ void uart_printf(const char *fmt, ...)
 
     /* semaphore given back in ISR */
 }
+
+/*******************************************************************************
+ * @brief Transmits raw data over UART using DMA
+ * @param data Pointer to the data buffer to transmit
+ * @param len Length of the data to transmit in bytes
+ */
+void uart_write(uint8_t * data, uint16_t len)
+{
+    xSemaphoreTake(uart_tx_sem, portMAX_DELAY);
+
+    DMA2_Stream7->NDTR = len;
+    DMA2_Stream7->M0AR = (uint32_t)data;
+    DMA2_Stream7->CR  |= DMA_SxCR_EN;
+
+    /* semaphore given back in ISR */
+}

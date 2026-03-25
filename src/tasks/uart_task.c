@@ -16,11 +16,13 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 /** Defines */
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 /** Global/Static variables */
+QueueHandle_t uart_tx_queue = NULL;
 // static char buffer[128];
 
 /** Functions */
@@ -35,26 +37,63 @@ uint32_t freertos_get_time(void)
 }
 
 /*******************************************************************************
+ * @brief Write raw bytes to output queue — dispatched by vTaskUartTx
+ * @note  buf[0] of queued message = fd, maps to UART instance
+ * @param fd   file descriptor (e.g. OS_TX_FD_UART1)
+ * @param buf  byte buffer to send
+ * @param len  number of bytes — clamped to OS_TX_BUF_SIZE
+ */
+void os_write(int fd, uint8_t * buf, uint16_t len)
+{
+    if (uart_tx_queue == NULL || buf == NULL || len == 0)
+        return;
+ 
+    if (len > OS_TX_BUF_SIZE)
+        len = OS_TX_BUF_SIZE;
+ 
+    os_tx_msg_t msg;
+    msg.fd  = fd;
+    msg.len = len;
+    memcpy(msg.buf, buf, len);
+ 
+    xQueueSend(uart_tx_queue, &msg, 0);
+}
+
+/*******************************************************************************
  * @brief Task to handle UART transmission
  */
 void vTaskUartTx(void * varg)
 {
     (void)varg; // Unused parameter
+    os_tx_msg_t msg;
 
-    uint32_t microseconds = 0;
+    uart_tx_queue = xQueueCreate(16, sizeof(os_tx_msg_t));
+    if (uart_tx_queue == NULL)
+    {
+        return;
+    }
 
     uart_printf("BOOT OK\n");
     uart_printf("BRANCH: %s\n",       build_info.branch);
     uart_printf("BUILD NUMBER: %s\n", build_info.build_number);
     uart_printf("SHA: %s\n",          build_info.git_sha);
 
-    while(1)
+    while (1)
     {
-
-        // Delay 1 second
-        vTaskDelay(pdMS_TO_TICKS(250));
-        // Do something with microseconds value
-        microseconds = usec_time_get();
+        /** Drain os_tx_queue — dispatch on fd in buf[0] */
+        while (xQueueReceive(uart_tx_queue, &msg, 0) == pdPASS)
+        {
+            uint8_t swtch = 1;
+            switch (swtch)
+            {
+                case OS_TX_FD_UART1:
+                    uart_write(msg.buf, msg.len);
+                    break;
+                default:
+                    /* Unknown fd — drop */
+                    break;
+            }
+        }
     }
 }
 
@@ -126,6 +165,6 @@ void vTaskUartRx(void * varg)
  */
 void os_putc(uint8_t byte)
 {
-    uart_printf("%c", byte);
+    (void)byte;
 }
 

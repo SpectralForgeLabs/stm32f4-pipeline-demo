@@ -29,8 +29,8 @@ typedef enum
     FRAME_ERR_INVALID_EOF,
     FRAME_ERR_OVERFLOW,
     FRAME_ERR_BAD_CRC,
-    FRAME_ERR_BYTE_TIMEOUT,    /* ← new */
-    FRAME_ERR_FRAME_TIMEOUT,   /* ← new */
+    FRAME_ERR_BYTE_TIMEOUT,
+    FRAME_ERR_FRAME_TIMEOUT,
 } frame_error_t;
 
 /** Framer state machine states */

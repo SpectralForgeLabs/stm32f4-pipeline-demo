@@ -4,12 +4,6 @@ A bare-metal embedded firmware project for the STM32F407VET6 (Cortex-M4F)
 demonstrating a complete, reproducible CI/CD build pipeline — no STM32CubeIDE, 
 no HAL bloat, no "works on my machine."
 
-## What this is
-
-This project exists to show small embedded teams what a professional build 
-pipeline looks like. If your current process is "build it on Dave's laptop 
-and hope for the best," this is the alternative.
-
 ## Hardware
 
 - STM32F407VET6 (Cortex-M4F, 168MHz, hard-float)
@@ -52,5 +46,3 @@ Local builds use dependencies from `$HOME/.embedded/`.
 
 Built by an embedded software engineer with production VxWorks experience. 
 Available for consulting on embedded CI/CD pipeline setup for small teams.
-
-Contact: [LinkedIn](https://www.linkedin.com/in/daniel-guillen-b7b239132/) 

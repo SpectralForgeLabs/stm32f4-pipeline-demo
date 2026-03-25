@@ -18,6 +18,7 @@ extern uint8_t uart_buf[256];
 
 int uart_init(void);
 void uart_printf(const char *fmt, ...);
+void uart_write(uint8_t * data, uint16_t len);
 
 #ifdef __cplusplus
 }
