@@ -46,6 +46,10 @@
 	extern uint32_t SystemCoreClock;
 #endif
 
+#define vPortSVCHandler     SVC_Handler
+#define xPortPendSVHandler  PendSV_Handler
+#define xPortSysTickHandler SysTick_Handler
+
 #define configUSE_PREEMPTION					1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION	1
 #define configUSE_IDLE_HOOK						1
@@ -78,6 +82,12 @@
 #define configTIMER_TASK_PRIORITY		( 2 )
 #define configTIMER_QUEUE_LENGTH		5
 #define configTIMER_TASK_STACK_DEPTH	( configMINIMAL_STACK_SIZE * 2 )
+
+/** Task priorities */
+#define tskUARTTX_PRIO				tskIDLE_PRIORITY + 2
+#define tskUARTRX_PRIO				tskIDLE_PRIORITY + 3
+#define tskBLINKY_PRIO				tskIDLE_PRIORITY + 1
+
 
 /* Set the following definitions to 1 to include the API function, or zero
 to exclude the API function. */

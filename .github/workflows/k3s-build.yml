@@ -2,35 +2,98 @@ name: STM32F407 Kubernetes Runner Build
 
 on:
   push:
+    branches-ignore:
+      - "master"
+  pull_request:
     branches: [ "master" ]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  test-framer:
+    runs-on: [spectral-k3s]
+    container:
+      image: registry.spectralforge.dev/unity:2.6.1
+      credentials:
+        username: admin
+        password: ${NEXUS_PASSWORD}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run framer unit test
+        run: |
+          cmake -S tests -B tests/build -G Ninja
+          ninja -C tests/build
+      - name: Run unit test
+        run: |
+          ctest --test-dir tests/build/ -V -R framer
+
+  test-parser:
+    runs-on: [spectral-k3s]
+    container:
+      image: registry.spectralforge.dev/unity:2.6.1
+      credentials:
+        username: admin
+        password: ${NEXUS_PASSWORD}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run parser unit test
+        run: |
+          cmake -S tests -B tests/build -G Ninja
+          ninja -C tests/build
+      - name: Run unit test
+        run: |
+          ctest --test-dir tests/build/ -V -R parser
+
   build-k3s:
+    needs: [test-framer, test-parser]
     runs-on: [spectral-k3s]
     container:
       image: arm-none-eabi:15.2
       env:
         GITHUB_SHA: ${{ github.sha }}
-        GITHUB_REF_NAME: ${{ github.ref_name }}
         BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
       - name: Build firmware
         run: |
+          export GITHUB_REF_NAME="${{ github.head_ref || github.ref_name }}"
           cmake -S . -B build -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE=cmake/arm-none-eabi-gcc.cmake
           cmake --build build
 
       - name: Upload artifacts to Nexus
         run: |
-          SHORT_SHA=${GITHUB_SHA::7}
-          BASE_URL="http://192.168.1.198:30081/repository/embedded-artifacts/${GITHUB_REF_NAME}"
-
+          export GITHUB_REF_NAME="${{ github.head_ref || github.ref_name }}"
+          SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
+          BASE_URL="nexus.spectralforge.dev/repository/embedded-artifacts/${GITHUB_REF_NAME}"
           curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.elf ${BASE_URL}/
           curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.hex ${BASE_URL}/
           curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.bin ${BASE_URL}/
           echo "Artifacts available at:"
           echo "${BASE_URL}/"
+
+  hil-test:
+    needs: [build-k3s]
+    if: github.event_name == 'pull_request'
+    runs-on: [spectral-single]
+    env:
+      NEXUS_PASSWORD: ${NEXUS_PASSWORD}
+    steps:
+      - uses: actions/checkout@v4
+ 
+      - name: Flash firmware
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            hil/hil_flash.sh \
+            ${{ github.head_ref }} \
+            ${{ github.run_number }} \
+            ${SHORT_SHA}
+ 
+      - name: Run HIL boot test
+        run: |
+          python3 hil/hil_test.py \
+            --port /dev/ttyUSB0 \
+            --branch ${{ github.head_ref }} \
+            --build-number ${{ github.run_number }} \
+            --sha ${{ github.sha }}

@@ -15,6 +15,7 @@
 /** Defines */
 
 /** Global/Static variables */
+gpio_handle_t led;
 static uint8_t spi_rx_buf[256];
 /** Functions */
 void vTaskBlinky(void * varg)
@@ -35,7 +36,7 @@ void vTaskBlinky(void * varg)
         .alternate_function = 0U,
         .initial_state = GPIO_STATE_LOW
     };
-    gpio_handle_t led = gpio_init(&led_cfg);
+    led = gpio_init(&led_cfg);
 
     SpiInit();
 
@@ -45,7 +46,6 @@ void vTaskBlinky(void * varg)
     {
         // Delay 1 second
         vTaskDelay(pdMS_TO_TICKS(500));
-        GPIO_TOGGLE(led);
         
         SpiTransfer(by, spi_rx_buf, sizeof(by), true);
         SpiTransfer(UNIQUE_ID, spi_rx_buf, sizeof(UNIQUE_ID), true);
