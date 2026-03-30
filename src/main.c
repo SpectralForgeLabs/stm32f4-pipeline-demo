@@ -7,6 +7,7 @@
 #include "timer.h"
 #include "version.h"
 #include "buildinfo.h"
+#include "uart.h"
 
 __attribute__((section(".builddata")))
 const build_info_t build_info = {
@@ -86,14 +87,17 @@ int main(void)
     
     /** Start Timers */
     Timer2Init(1000); // Initialize Timer 2 with 1kHz frequency
+    uart_init();
 
-    xTaskCreate(vTaskBlinky, "vBlinky", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
-    xTaskCreate(vTaskUart, "vUart", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
+
+    xTaskCreate(vTaskBlinky, "vBlinky", configMINIMAL_STACK_SIZE, NULL, tskBLINKY_PRIO, NULL);
+    xTaskCreate(vTaskUartTx, "vUart", 0x200, NULL, tskUARTTX_PRIO, NULL);
+    xTaskCreate(vTaskUartRx, "vUartRx", 0x200, NULL, tskUARTRX_PRIO, NULL);
 
     vTaskStartScheduler();
 
     /** Shouldn't get here */
     while (1);
 
-    return 0;
+    return ERROR;
 }
