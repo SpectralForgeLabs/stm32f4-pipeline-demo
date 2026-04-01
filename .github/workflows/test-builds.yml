@@ -42,7 +42,16 @@ jobs:
       - name: Run unit test
         run: |
           ctest --test-dir tests/build/ -V -R parser --output-junit parser.xml
-
+          
+  publish-results:
+    needs: [test-framer, test-parser]
+    runs-on: [spectral-k3s]
+    container:
+      image: registry.spectralforge.dev/unity:2.6.1
+      credentials:
+        username: admin
+        password: ${NEXUS_PASSWORD}
+    steps:
       - name: Publish Test Results
         if: always()
         uses: dorny/test-reporter@v3
