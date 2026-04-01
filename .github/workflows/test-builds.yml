@@ -9,7 +9,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  hello-world:
+  test-framer:
     runs-on: [spectral-k3s]
     container:
       image: registry.spectralforge.dev/unity:2.6.1
@@ -17,5 +17,38 @@ jobs:
         username: admin
         password: ${NEXUS_PASSWORD}
     steps:
-      - name: Hello world
-        run: echo "Hello from Kubernetes Runner!"
+      - uses: actions/checkout@v4
+      - name: Run framer unit test
+        run: |
+          cmake -S tests -B tests/build -G Ninja
+          ninja -C tests/build
+      - name: Run unit test
+        run: |
+          ctest --test-dir tests/build/ -V -R framer --output-junit framer.xml
+
+  test-parser:
+    runs-on: [spectral-k3s]
+    container:
+      image: registry.spectralforge.dev/unity:2.6.1
+      credentials:
+        username: admin
+        password: ${NEXUS_PASSWORD}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run parser unit test
+        run: |
+          cmake -S tests -B tests/build -G Ninja
+          ninja -C tests/build
+      - name: Run unit test
+        run: |
+          ctest --test-dir tests/build/ -V -R parser --output-junit parser.xml
+
+      - name: Publish Test Results
+        if: always()
+        uses: dorny/test-reporter@v3
+        with:
+          name: Unity Report
+          path: |
+            tests/build/framer.xml
+            tests/build/parser.xml
+          reporter: java-junit
