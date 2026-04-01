@@ -17,9 +17,16 @@ if [ -z "$BRANCH" ] || [ -z "$BUILD_NUMBER" ] || [ -z "$SHORT_SHA" ]; then
 fi
 
 NEXUS_URL="nexus.spectralforge.dev/repository/embedded-artifacts"
-NEXUS_PWD=$(cat /home/alicevirgin/.secrets/nexus.pwd)
+# Resolve Nexus credentials (local dev or CI)
+NEXUS_PWD="${NEXUS_PWD:-${NEXUS_PASSWORD}}"
 HEX_FILE="stm32-${BUILD_NUMBER}-${SHORT_SHA}.hex"
 FETCH_URL="${NEXUS_URL}/${BRANCH}/${HEX_FILE}"
+
+if [ -z "$NEXUS_PWD" ]; then
+  echo "[ERROR] Nexus password not provided."
+  echo "Set NEXUS_PWD (local) or NEXUS_PASSWORD (CI)."
+  exit 1
+fi
 
 echo "Fetching: ${FETCH_URL}"
 curl -f -u admin:${NEXUS_PWD} -o /tmp/${HEX_FILE} ${FETCH_URL}
