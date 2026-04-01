@@ -11,6 +11,9 @@ env:
 jobs:
   tests:
     runs-on: [spectral-k3s]
+    permissions:
+      contents: read
+      checks: write
     container:
       image: registry.spectralforge.dev/unity:2.6.1
 
