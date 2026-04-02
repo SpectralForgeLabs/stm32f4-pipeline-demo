@@ -10,17 +10,20 @@ set -e
 BRANCH=$1
 BUILD_NUMBER=$2
 SHORT_SHA=$3
+REPO=$4
 
-if [ -z "$BRANCH" ] || [ -z "$BUILD_NUMBER" ] || [ -z "$SHORT_SHA" ]; then
-    echo "Usage: $0 <branch> <build_number> <short_sha>"
+if [ -z "$BRANCH" ] || [ -z "$BUILD_NUMBER" ] || [ -z "$SHORT_SHA" ] || [ -z "$REPO" ]; then
+    echo "Usage: $0 <branch> <build_number> <short_sha> <repo>"
     exit 1
 fi
 
+SAFE_BRANCH="${GITHUB_REF_NAME//\//_}"
 NEXUS_URL="nexus.spectralforge.dev/repository/embedded-artifacts"
 # Resolve Nexus credentials (local dev or CI)
 NEXUS_PWD="${NEXUS_PWD:-${NEXUS_PASSWORD}}"
-HEX_FILE="stm32-${BUILD_NUMBER}-${SHORT_SHA}.hex"
-FETCH_URL="${NEXUS_URL}/${BRANCH}/${HEX_FILE}"
+TAR_FILE="stm32-${SAFE_BRANCH}-${BUILD_NUMBER}-${SHORT_SHA}.tar"
+HEX_FILE="stm32-${SAFE_BRANCH}-${BUILD_NUMBER}-${SHORT_SHA}.hex"
+FETCH_URL="${NEXUS_URL}/${REPO}/${BRANCH}"
 
 if [ -z "$NEXUS_PWD" ]; then
   echo "[ERROR] Nexus password not provided."
@@ -28,9 +31,14 @@ if [ -z "$NEXUS_PWD" ]; then
   exit 1
 fi
 
-echo "Fetching: ${FETCH_URL}"
-curl -f -u admin:${NEXUS_PWD} -o /tmp/${HEX_FILE} ${FETCH_URL}
-echo "Downloaded: /tmp/${HEX_FILE}"
+echo "Fetching: ${FETCH_URL}/${TAR_FILE}"
+curl -f -u admin:${NEXUS_PWD} -o /tmp/${TAR_FILE} ${FETCH_URL}/${TAR_FILE}
+echo "Downloaded: /tmp/${TAR_FILE}"
+echo "Extracting firmware..."
+mkdir -p /tmp/firmware
+tar -xf /tmp/${TAR_FILE} -C /tmp/firmware
+echo "Firmware extracted to /tmp/firmware"
+ls -l /tmp/firmware
 
 echo "Flashing..."
 openocd \
