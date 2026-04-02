@@ -144,25 +144,37 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
 )
 # Compute short SHA from BUILD_NUMBER is already set, grab SHA too
 string(SUBSTRING "${GIT_SHA}" 0 7 SHORT_SHA)
-
+string(REPLACE "/" "_" GIT_BRANCH_SAFE "${GIT_BRANCH}")
+set(STAMPED_BASENAME
+    "${PROJECT_NAME}-${GIT_BRANCH_SAFE}-${BUILD_NUMBER}-${SHORT_SHA}"
+)
 # ---- Generate .hex and .bin ----
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
-  
-
   COMMAND ${CMAKE_OBJCOPY} -O ihex
           $<TARGET_FILE:${PROJECT_NAME}.elf>
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-${BUILD_NUM}-${SHORT_SHA}.hex
+          ${CMAKE_BINARY_DIR}/${STAMPED_BASENAME}.hex
   COMMAND ${CMAKE_OBJCOPY} -O binary
           $<TARGET_FILE:${PROJECT_NAME}.elf>
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-${BUILD_NUM}-${SHORT_SHA}.bin
-
-# Rename ELF with build number
+          ${CMAKE_BINARY_DIR}/${STAMPED_BASENAME}.bin
+  # Rename ELF with build number
   COMMAND ${CMAKE_COMMAND} -E rename
           $<TARGET_FILE:${PROJECT_NAME}.elf>
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-${BUILD_NUM}-${SHORT_SHA}.elf
+          ${CMAKE_BINARY_DIR}/${STAMPED_BASENAME}.elf
   BYPRODUCTS
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-${BUILD_NUM}-${SHORT_SHA}.hex
-          ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-${BUILD_NUM}-${SHORT_SHA}.bin
+          ${CMAKE_BINARY_DIR}/${STAMPED_BASENAME}.hex
+          ${CMAKE_BINARY_DIR}/${STAMPED_BASENAME}.bin
+)
 
-  COMMENT "Packaging: ${PROJECT_NAME}-${BUILD_NUMBER}-${SHORT_SHA}.{elf,hex,bin}"
+add_custom_target(postbuild_artifacts ALL
+    COMMAND ${CMAKE_COMMAND}
+            -DARTIFACT_DIR=${CMAKE_BINARY_DIR}
+            -DSTAMPED_BASENAME=${STAMPED_BASENAME}
+            -DGIT_BRANCH=${GIT_BRANCH}
+            -DGIT_SHA=${GIT_SHA}
+            -DGIT_SHA_SHORT=${SHORT_SHA}
+            -DBUILD_NUMBER=${BUILD_NUMBER}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/postbuild.cmake
+    DEPENDS
+            ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.elf
+    COMMENT "Running post-build artifact script"
 )

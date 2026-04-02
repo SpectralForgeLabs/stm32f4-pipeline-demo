@@ -109,11 +109,6 @@ void vTaskUartRx(void * varg)
 
     framer_init(&framer, freertos_get_time);
 
-    uart_printf("BOOT OK\n");
-    uart_printf("BRANCH: %s\n",       build_info.branch);
-    uart_printf("BUILD NUMBER: %s\n", build_info.build_number);
-    uart_printf("SHA: %s\n",          build_info.git_sha);
-
     while(1)
     {
         if (xQueueReceive(uart_rx_queue, &by, portMAX_DELAY) == pdPASS) 

@@ -4,6 +4,7 @@ on:
   push:
     branches-ignore:
       - "master"
+      - "test/*"
   pull_request:
     branches: [ "master" ]
 
@@ -65,11 +66,10 @@ jobs:
       - name: Upload artifacts to Nexus
         run: |
           export GITHUB_REF_NAME="${{ github.head_ref || github.ref_name }}"
+          SAFE_REF_NAME=$(printf '%s' "${GITHUB_REF_NAME}" | tr '/' '_')
           SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
-          BASE_URL="nexus.spectralforge.dev/repository/embedded-artifacts/${GITHUB_REF_NAME}"
-          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.elf ${BASE_URL}/
-          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.hex ${BASE_URL}/
-          curl -v -u admin:${NEXUS_PASSWORD} --upload-file ./build/stm32-${BUILD_NUMBER}-${SHORT_SHA}.bin ${BASE_URL}/
+          BASE_URL="nexus.spectralforge.dev/repository/embedded-artifacts/${{ github.repository }}/${GITHUB_REF_NAME}/"
+          curl -v -u admin:${NEXUS_PASSWORD} --upload-file build/stm32-${SAFE_REF_NAME}-${{ github.run_number }}-${SHORT_SHA}.tar "${BASE_URL}"
           echo "Artifacts available at:"
           echo "${BASE_URL}/"
 
@@ -78,22 +78,25 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: [spectral-single]
     env:
-      NEXUS_PASSWORD: ${NEXUS_PASSWORD}
+      NEXUS_PASSWORD: ${NEXUS_PWD}
     steps:
       - uses: actions/checkout@v4
  
       - name: Flash firmware
         run: |
+          export GITHUB_REF_NAME="${{ github.head_ref || github.ref_name }}"
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-            hil/hil_flash.sh \
-            ${{ github.head_ref }} \
+            tests/hil/hil_flash.sh \
+            ${GITHUB_REF_NAME}  \
             ${{ github.run_number }} \
-            ${SHORT_SHA}
+            ${SHORT_SHA}             \
+            ${{ github.repository }} 
  
       - name: Run HIL boot test
         run: |
+          export GITHUB_REF_NAME="${{ github.head_ref || github.ref_name }}"
           python3 hil/hil_test.py \
             --port /dev/ttyUSB0 \
-            --branch ${{ github.head_ref }} \
+            --branch ${GITHUB_REF_NAME} \
             --build-number ${{ github.run_number }} \
             --sha ${{ github.sha }}
